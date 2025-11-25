@@ -16,6 +16,36 @@ function listRecords() {
   return fileDB.readDB();
 }
 
+function searchRecords(keyword) {
+  const data = fileDB.readDB();
+  const key = keyword.toLowerCase();
+
+  return data.filter(
+    r =>
+      r.name.toLowerCase().includes(key) ||
+      r.value.toLowerCase().includes(key)
+  );
+}
+
+
+function sortRecords(by = "id") {
+  const data = fileDB.readDB();
+
+  if (by === "id") {
+    return data.sort((a, b) => a.id - b.id);
+  }
+
+  if (by === "name") {
+    return data.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  if (by === "value") {
+    return data.sort((a, b) => a.value.localeCompare(b.value));
+  }
+
+  return data;
+}
+
 function updateRecord(id, newName, newValue) {
   const data = fileDB.readDB();
   const record = data.find(r => r.id === id);
@@ -37,22 +67,11 @@ function deleteRecord(id) {
   return record;
 }
 
-function searchRecords(query) {
-  const data = fileDB.readDB();
-
-  query = query.toLowerCase();
-
-  return data.filter(r =>
-    r.name.toLowerCase().includes(query) ||
-    r.value.toLowerCase().includes(query)
-  );
-}
-
 module.exports = { 
   addRecord, 
   listRecords, 
+  searchRecords, 
+  sortRecords,
   updateRecord, 
-  deleteRecord,
-  searchRecords
+  deleteRecord 
 };
-
