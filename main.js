@@ -1,6 +1,6 @@
 const readline = require('readline');
 const db = require('./db');
-require('./events/logger'); // Initialize event logger
+require('./events/logger');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -14,17 +14,19 @@ function menu() {
 2. List Records
 3. Update Record
 4. Delete Record
-5. Exit
+5. Search Records
+6. Exit
 =====================
   `);
 
   rl.question('Choose option: ', ans => {
     switch (ans.trim()) {
+
       case '1':
         rl.question('Enter name: ', name => {
           rl.question('Enter value: ', value => {
             db.addRecord({ name, value });
-            console.log('✅ Record added successfully!');
+            console.log('Record added successfully!');
             menu();
           });
         });
@@ -42,7 +44,7 @@ function menu() {
           rl.question('New name: ', name => {
             rl.question('New value: ', value => {
               const updated = db.updateRecord(Number(id), name, value);
-              console.log(updated ? '✅ Record updated!' : '❌ Record not found.');
+              console.log(updated ? 'Record updated!' : 'Record not found.');
               menu();
             });
           });
@@ -52,13 +54,30 @@ function menu() {
       case '4':
         rl.question('Enter record ID to delete: ', id => {
           const deleted = db.deleteRecord(Number(id));
-          console.log(deleted ? '🗑️ Record deleted!' : '❌ Record not found.');
+          console.log(deleted ? 'Record deleted!' : 'Record not found.');
           menu();
         });
         break;
 
+    
       case '5':
-        console.log('👋 Exiting NodeVault...');
+        rl.question('Enter search text: ', text => {
+          const results = db.searchRecords(text);
+
+          if (results.length === 0) {
+            console.log('No matching records found.');
+          } else {
+            console.log(`Found ${results.length} record(s):`);
+            results.forEach(r =>
+              console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`)
+            );
+          }
+          menu();
+        });
+        break;
+
+      case '6':
+        console.log('Exiting NodeVault...');
         rl.close();
         break;
 
