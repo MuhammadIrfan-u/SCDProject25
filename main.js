@@ -1,6 +1,6 @@
 const readline = require('readline');
 const db = require('./db');
-require('./events/logger');
+require('./events/logger'); // Initialize event logger
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -15,7 +15,8 @@ function menu() {
 3. Update Record
 4. Delete Record
 5. Search Records
-6. Exit
+6. Sort Records
+7. Exit
 =====================
   `);
 
@@ -59,24 +60,24 @@ function menu() {
         });
         break;
 
-    
-      case '5':
-        rl.question('Enter search text: ', text => {
-          const results = db.searchRecords(text);
-
-          if (results.length === 0) {
-            console.log('No matching records found.');
-          } else {
-            console.log(`Found ${results.length} record(s):`);
-            results.forEach(r =>
-              console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`)
-            );
-          }
+      case '5': 
+        rl.question('Enter keyword to search: ', key => {
+          const results = db.searchRecords(key);
+          if (results.length === 0) console.log('No matching records found.');
+          else results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
           menu();
         });
         break;
 
-      case '6':
+      case '6': 
+        rl.question('Sort by (id / name / value): ', option => {
+          const sorted = db.sortRecords(option.trim());
+          sorted.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+          menu();
+        });
+        break;
+
+      case '7':
         console.log('Exiting NodeVault...');
         rl.close();
         break;
