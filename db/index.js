@@ -1,6 +1,7 @@
 const fileDB = require('./file');
 const recordUtils = require('./record');
 const vaultEvents = require('../events');
+const fs=require('fs');
 
 function addRecord({ name, value }) {
   recordUtils.validateRecord({ name, value });

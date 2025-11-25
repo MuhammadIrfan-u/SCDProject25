@@ -16,7 +16,8 @@ function menu() {
 4. Delete Record
 5. Search Records
 6. Sort Records
-7. Exit
+7. Export Json data to Text File
+8. Exit
 =====================
   `);
 
@@ -77,7 +78,12 @@ function menu() {
         });
         break;
 
-      case '7':
+       case '7':
+        const fileName=db.exportRecords();
+         console.log(`Data written to ${fileName}`);
+         menu();
+         break;
+      case '8':
         console.log('Exiting NodeVault...');
         rl.close();
         break;
