@@ -1,7 +1,21 @@
 const readline = require('readline');
+const mongoose = require('mongoose');
+require('dotenv').config(); // Load environment variables
 const db = require('./db');
 require('./events/logger'); // Initialize event logger
 
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ Connected to MongoDB Atlas'))
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err);
+  process.exit(1);
+});
+
+// Readline interface
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -16,19 +30,18 @@ function menu() {
 4. Delete Record
 5. Search Records
 6. Sort Records
-7. Export Json data to Text File
+7. Export Records
 8. Exit
 =====================
   `);
 
   rl.question('Choose option: ', ans => {
     switch (ans.trim()) {
-
       case '1':
         rl.question('Enter name: ', name => {
           rl.question('Enter value: ', value => {
             db.addRecord({ name, value });
-            console.log('Record added successfully!');
+            console.log('✅ Record added successfully!');
             menu();
           });
         });
@@ -46,7 +59,7 @@ function menu() {
           rl.question('New name: ', name => {
             rl.question('New value: ', value => {
               const updated = db.updateRecord(Number(id), name, value);
-              console.log(updated ? 'Record updated!' : 'Record not found.');
+              console.log(updated ? '✅ Record updated!' : '❌ Record not found.');
               menu();
             });
           });
@@ -56,36 +69,39 @@ function menu() {
       case '4':
         rl.question('Enter record ID to delete: ', id => {
           const deleted = db.deleteRecord(Number(id));
-          console.log(deleted ? 'Record deleted!' : 'Record not found.');
+          console.log(deleted ? '🗑️ Record deleted!' : '❌ Record not found.');
           menu();
         });
         break;
 
-      case '5': 
-        rl.question('Enter keyword to search: ', key => {
-          const results = db.searchRecords(key);
+      case '5':
+        rl.question('Enter keyword to search: ', keyword => {
+          const results = db.searchRecords(keyword);
           if (results.length === 0) console.log('No matching records found.');
           else results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
           menu();
         });
         break;
 
-      case '6': 
-        rl.question('Sort by (id / name / value): ', option => {
-          const sorted = db.sortRecords(option.trim());
-          sorted.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+      case '6':
+        rl.question('Sort by (id, name, value): ', by => {
+          const sorted = db.sortRecords(by);
+          if (sorted.length === 0) console.log('No records to sort.');
+          else sorted.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
           menu();
         });
         break;
 
-       case '7':
-        const fileName=db.exportRecords();
-         console.log(`Data written to ${fileName}`);
-         menu();
-         break;
+      case '7':
+        const fileName = db.exportRecords();
+        console.log(`✅ Data exported to file: ${fileName}`);
+        menu();
+        break;
+
       case '8':
-        console.log('Exiting NodeVault...');
+        console.log('👋 Exiting NodeVault...');
         rl.close();
+        mongoose.disconnect(); // Disconnect from MongoDB
         break;
 
       default:
@@ -96,3 +112,4 @@ function menu() {
 }
 
 menu();
+
