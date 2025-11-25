@@ -67,11 +67,20 @@ function deleteRecord(id) {
   return record;
 }
 
+
+function exportRecords(filename = 'vault-export.txt') {
+  const data = fileDB.readDB();
+  const text = data.map(r => `ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`).join('\n');
+  fs.writeFileSync(filename, text);
+  return filename;
+}
+
 module.exports = { 
   addRecord, 
   listRecords, 
   searchRecords, 
   sortRecords,
   updateRecord, 
-  deleteRecord 
+  deleteRecord,
+  exportRecords
 };
