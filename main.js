@@ -6,15 +6,14 @@ require('./events/logger'); // Initialize event logger
 
 mongoose.set('strictQuery', true);
 
-
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('✅ Connected to MongoDB Atlas'))
+.then(() => console.log('Connected to MongoDB Atlas'))
 .catch(err => {
-  console.error('❌ MongoDB connection error:', err);
+  console.error('MongoDB connection error:', err);
   process.exit(1);
 });
 
@@ -24,7 +23,12 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-function menu() {
+// Helper function to use rl.question with async/await
+function ask(question) {
+  return new Promise(resolve => rl.question(question, resolve));
+}
+
+async function menu() {
   console.log(`
 ===== NodeVault =====
 1. Add Record
@@ -38,81 +42,74 @@ function menu() {
 =====================
   `);
 
-  rl.question('Choose option: ', ans => {
-    switch (ans.trim()) {
-      case '1':
-        rl.question('Enter name: ', name => {
-          rl.question('Enter value: ', value => {
-            db.addRecord({ name, value });
-            console.log('✅ Record added successfully!');
-            menu();
-          });
-        });
-        break;
+  const ans = await ask('Choose option: ');
 
-      case '2':
-        const records = db.listRecords();
-        if (records.length === 0) console.log('No records found.');
-        else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
-        menu();
-        break;
-
-      case '3':
-        rl.question('Enter record ID to update: ', id => {
-          rl.question('New name: ', name => {
-            rl.question('New value: ', value => {
-              const updated = db.updateRecord(Number(id), name, value);
-              console.log(updated ? '✅ Record updated!' : '❌ Record not found.');
-              menu();
-            });
-          });
-        });
-        break;
-
-      case '4':
-        rl.question('Enter record ID to delete: ', id => {
-          const deleted = db.deleteRecord(Number(id));
-          console.log(deleted ? '🗑️ Record deleted!' : '❌ Record not found.');
-          menu();
-        });
-        break;
-
-      case '5':
-        rl.question('Enter keyword to search: ', keyword => {
-          const results = db.searchRecords(keyword);
-          if (results.length === 0) console.log('No matching records found.');
-          else results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
-          menu();
-        });
-        break;
-
-      case '6':
-        rl.question('Sort by (id, name, value): ', by => {
-          const sorted = db.sortRecords(by);
-          if (sorted.length === 0) console.log('No records to sort.');
-          else sorted.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
-          menu();
-        });
-        break;
-
-      case '7':
-        const fileName = db.exportRecords();
-        console.log(`✅ Data exported to file: ${fileName}`);
-        menu();
-        break;
-
-      case '8':
-        console.log('👋 Exiting NodeVault...');
-        rl.close();
-        mongoose.disconnect(); // Disconnect from MongoDB
-        break;
-
-      default:
-        console.log('Invalid option.');
-        menu();
+  switch (ans.trim()) {
+    case '1': {
+      const name = await ask('Enter name: ');
+      const value = await ask('Enter value: ');
+      await db.addRecord({ name, value });
+      console.log('Record added successfully!');
+      break;
     }
-  });
+
+    case '2': {
+      const records = await db.listRecords();
+      if (records.length === 0) console.log('No records found.');
+      else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+      break;
+    }
+
+    case '3': {
+      const id = await ask('Enter record ID to update: ');
+      const name = await ask('New name: ');
+      const value = await ask('New value: ');
+      const updated = await db.updateRecord(Number(id), name, value);
+      console.log(updated ? 'Record updated!' : 'Record not found.');
+      break;
+    }
+
+    case '4': {
+      const id = await ask('Enter record ID to delete: ');
+      const deleted = await db.deleteRecord(Number(id));
+      console.log(deleted ? 'Record deleted!' : 'Record not found.');
+      break;
+    }
+
+    case '5': {
+      const keyword = await ask('Enter keyword to search: ');
+      const results = await db.searchRecords(keyword);
+      if (results.length === 0) console.log('No matching records found.');
+      else results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+      break;
+    }
+
+    case '6': {
+      const by = await ask('Sort by (id, name, value): ');
+      const sorted = await db.sortRecords(by);
+      if (sorted.length === 0) console.log('No records to sort.');
+      else sorted.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+      break;
+    }
+
+    case '7': {
+      const fileName = await db.exportRecords();
+      console.log(`Data exported to file: ${fileName}`);
+      break;
+    }
+
+    case '8':
+      console.log('Exiting NodeVault...');
+      rl.close();
+      await mongoose.disconnect(); // Disconnect from MongoDB
+      return;
+
+    default:
+      console.log('Invalid option.');
+  }
+
+  // Show menu again
+  menu();
 }
 
 menu();
-
