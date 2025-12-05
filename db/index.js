@@ -1,18 +1,19 @@
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
-const fileDB = require('./file');   // keep old file functions (optional)
+const fileDB = require('./file');
 const recordUtils = require('./record');
 const vaultEvents = require('../events');
 const fs = require("fs");
+const path = require("path");
 
 const uri = process.env.MONGO_URI;
 const dbName = "UsersData";
-const collectionName="Users";
+const collectionName = "Users";
 
 let db, collection;
 
 async function connectDB() {
-  if (db) return; // already connected
+  if (db) return;
 
   const client = new MongoClient(uri);
   await client.connect();
@@ -20,7 +21,30 @@ async function connectDB() {
   db = client.db(dbName);
   collection = db.collection(collectionName);
 
-  console.log("✅ Connected to MongoDB Atlas");
+  console.log("Connected");
+}
+
+//
+// ✅ CREATE BACKUP
+//
+async function createBackup() {
+  await connectDB();
+
+  const data = await collection.find().toArray();
+
+  const backupDir = path.join(__dirname, "../backups");
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+
+  const now = new Date();
+  const dateTime = now.toISOString().replace(/T/, "_").replace(/:/g, "-").split(".")[0];
+  const filename = `backup_${dateTime}.json`;
+  const filePath = path.join(backupDir, filename);
+
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+  console.log(`✅ Backup successfully created: ${filename}`);
 }
 
 //
@@ -39,6 +63,8 @@ async function addRecord({ name, value }) {
 
   await collection.insertOne(newRecord);
   vaultEvents.emit("recordAdded", newRecord);
+
+  await createBackup();   // ✅ AUTO BACKUP AFTER ADD
 
   return newRecord;
 }
@@ -109,6 +135,9 @@ async function deleteRecord(id) {
   await collection.deleteOne({ id });
 
   vaultEvents.emit("recordDeleted", record);
+
+  await createBackup();
+
   return record;
 }
 
@@ -127,6 +156,73 @@ async function exportRecords(filename = "vault-export.txt") {
   return filename;
 }
 
+//
+//  VIEW VAULT STATISTICS
+//
+async function viewStatistics() {
+  await connectDB();
+
+  const records = await collection.find().toArray();
+  const totalRecords = records.length;
+
+  if (totalRecords === 0) {
+    console.log("\n📊 Vault Statistics");
+    console.log("------------------");
+    console.log("Total Records: 0");
+    console.log("No further statistics available.\n");
+    return;
+  }
+
+  //  Longest Name
+  let longestName = records[0].name;
+  for (let r of records) {
+    if (r.name.length > longestName.length) {
+      longestName = r.name;
+    }
+  }
+
+  //  Earliest & Latest Record Using MongoDB _id Timestamp
+  const sortedByDate = [...records].sort(
+    (a, b) => a._id.getTimestamp() - b._id.getTimestamp()
+  );
+
+  const earliestDate = sortedByDate[0]._id.getTimestamp();
+  const latestDate = sortedByDate[sortedByDate.length - 1]._id.getTimestamp();
+
+  //  Most Recent Modification (From Backup Files)
+  const backupDir = path.join(__dirname, "../backups");
+  let latestModification = "No backup found";
+
+  if (fs.existsSync(backupDir)) {
+    const files = fs.readdirSync(backupDir);
+    if (files.length > 0) {
+      let latestFile = files[0];
+      let latestTime = fs.statSync(path.join(backupDir, latestFile)).mtime;
+
+      for (let f of files) {
+        const fileTime = fs.statSync(path.join(backupDir, f)).mtime;
+        if (fileTime > latestTime) {
+          latestTime = fileTime;
+          latestFile = f;
+        }
+      }
+
+      latestModification = latestTime.toLocaleString();
+    }
+  }
+
+  console.log("Vault Statistics");
+  console.log("------------------");
+  console.log(`Total Records: ${totalRecords}`);
+  console.log(`Most Recent Modification: ${latestModification}`);
+  console.log(`Longest Name: ${longestName} (${longestName.length} characters)`);
+  console.log(`Earliest Record Date: ${earliestDate.toLocaleString()}`);
+  console.log(`Latest Record Date: ${latestDate.toLocaleString()}\n`);
+}
+
+
+
+
 module.exports = {
   addRecord,
   listRecords,
@@ -134,6 +230,7 @@ module.exports = {
   sortRecords,
   updateRecord,
   deleteRecord,
-  exportRecords
+  exportRecords,
+  viewStatistics
 };
 

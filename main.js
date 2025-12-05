@@ -11,7 +11,7 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('Connected to MongoDB Atlas'))
+.then(() => console.log(''))
 .catch(err => {
   console.error('MongoDB connection error:', err);
   process.exit(1);
@@ -38,7 +38,8 @@ async function menu() {
 5. Search Records
 6. Sort Records
 7. Export Records
-8. Exit
+8. View Statistics
+9. Exit
 =====================
   `);
 
@@ -98,7 +99,12 @@ async function menu() {
       break;
     }
 
-    case '8':
+     case '8':
+  await db.viewStatistics();
+  break;
+
+
+    case '9':
       console.log('Exiting NodeVault...');
       rl.close();
       await mongoose.disconnect(); // Disconnect from MongoDB
