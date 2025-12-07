@@ -2,6 +2,7 @@ services:
   mongodb:
     image: mongo:4.4
     container_name: mongodb
+    # Running MongoDB in the background (detached)
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
@@ -11,7 +12,7 @@ services:
     networks:
       - mongo-backend-network
     ports:
-      - "27017:27017"
+      - "27017:27017" # Optional: Only needed if you want to access Mongo from your host machine
 
   node-backend:
     build:
@@ -29,7 +30,9 @@ services:
     networks:
       - mongo-backend-network
 
-    # ✅ THESE TWO LINES FIX INTERACTIVITY
+    # ✅ THESE TWO LINES ENABLE INTERACTIVITY
+    # This allows you to attach to the backend container after it starts
+    # and interact with it (e.g., if you run a shell or a program that needs input)
     tty: true
     stdin_open: true
 
@@ -39,4 +42,3 @@ volumes:
 networks:
   mongo-backend-network:
     driver: bridge
-
